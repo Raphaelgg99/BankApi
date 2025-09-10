@@ -78,7 +78,6 @@ public class BancoDigitalApplication implements CommandLineRunner {
 			conta.setRoles(roles);
 			contaController.adicionarConta(conta);
 		}
-		telaInicial.iniciar();
 	}
 }
 
