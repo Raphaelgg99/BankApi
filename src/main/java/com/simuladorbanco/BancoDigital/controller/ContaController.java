@@ -1,86 +1,68 @@
 package com.simuladorbanco.BancoDigital.controller;
 
+import com.simuladorbanco.BancoDigital.dtos.TransacaoDTO;
 import com.simuladorbanco.BancoDigital.dtos.TransferenciaRequest;
-import com.simuladorbanco.BancoDigital.exception.NomeNullException;
-import com.simuladorbanco.BancoDigital.exception.SenhaNullException;
-import com.simuladorbanco.BancoDigital.exception.SenhaRepetidaException;
 import com.simuladorbanco.BancoDigital.model.Conta;
-import com.simuladorbanco.BancoDigital.repository.ContaRepository;
 import com.simuladorbanco.BancoDigital.service.ContaService;
+import com.simuladorbanco.BancoDigital.service.HistoricoService;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.http.ResponseEntity;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Optional;
 
 @RestController
 @RequestMapping("/conta")
+@CrossOrigin(origins = "*")
 public class ContaController {
-
-    @Autowired
-    ContaRepository contaRepository;
 
     @Autowired
     ContaService contaService;
 
     @Autowired
-    private PasswordEncoder encoder;
+    HistoricoService historicoService;
 
     @PutMapping("/{numeroDaConta}/depositar")
     @Transactional
-    public Conta depositar(@RequestBody Double valor, @PathVariable Long numeroDaConta) {
-        Conta conta = contaRepository.findById(numeroDaConta)
-                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
-        conta.setSaldo(conta.getSaldo() + valor);
-        System.out.println("Conta atualizada: " + conta);
-        return contaRepository.save(conta);
+    public ResponseEntity<TransacaoDTO> depositar(@RequestBody Double valor, @PathVariable Long numeroDaConta) {
+       return ResponseEntity.ok(contaService.depositar(valor, numeroDaConta));
     }
 
     @PutMapping("/{numeroDaConta}/sacar")
-    public Conta sacar(@RequestBody double valor, @PathVariable Long numeroDaConta){
-        Conta conta = contaRepository.findById(numeroDaConta)
-                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
-        conta.setSaldo(conta.getSaldo() - valor);
-        return contaRepository.save(conta);
+    public ResponseEntity <TransacaoDTO> sacar(@RequestBody double valor, @PathVariable Long numeroDaConta){
+        return ResponseEntity.ok(contaService.sacar(valor, numeroDaConta));
     }
 
     @PutMapping("/{numeroContaRemetente}/transferencia")
-    public void tranferencia(@RequestBody TransferenciaRequest transferencia, @PathVariable Long numeroContaRemetente
-            ){
-        Conta contaRemetente = contaRepository.findById(numeroContaRemetente)
-                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
-        Conta contaDestinario = contaRepository.findById(transferencia.getNumeroContaDestinatario())
-                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
-        contaRemetente.setSaldo(contaRemetente.getSaldo() - transferencia.getValor());
-        contaDestinario.setSaldo(contaDestinario.getSaldo() + transferencia.getValor());
-        contaRepository.save(contaRemetente);
-        contaRepository.save(contaDestinario);
+    public ResponseEntity <TransacaoDTO> transferencia(@RequestBody TransferenciaRequest transferencia,
+                                              @PathVariable Long numeroContaRemetente){
+        return ResponseEntity.ok(contaService.transferencia(transferencia, numeroContaRemetente));
     }
 
-
     @PostMapping("/adicionar")
-    public void adicionarConta(@RequestBody Conta conta) {
-        contaService.criarConta(conta);
+    public ResponseEntity<Conta> adicionarConta(@RequestBody Conta conta) {
+        return ResponseEntity.ok(contaService.criarConta(conta));
     }
 
     @PutMapping("/{numeroDaConta}/atualizar")
-    public void atualizarConta(@PathVariable Long numeroDaConta,@RequestBody Conta contaAtualizada){
-        contaService.atualizarConta(numeroDaConta, contaAtualizada);
+    public ResponseEntity<Conta> atualizarConta(@PathVariable Long numeroDaConta, @RequestBody Conta contaAtualizada){
+        return ResponseEntity.ok(contaService.atualizarConta(numeroDaConta, contaAtualizada));
     }
 
     @DeleteMapping("/{numeroDaConta}")
-    public void removerConta(@PathVariable Long numeroDaConta){
-        Conta conta = contaRepository.findById(numeroDaConta).
-                orElseThrow(() -> new RuntimeException("Contato não encontrado"));
-        contaRepository.delete(conta);
+    public ResponseEntity<String> removerConta(@PathVariable Long numeroDaConta){
+        contaService.removerConta(numeroDaConta);
+        return ResponseEntity.ok("Conta removida com sucesso");
     }
 
     @GetMapping("/listartodas")
-    public List<Conta> listarTodos(){
-        return contaRepository.findAll();
+    public ResponseEntity <List<Conta>> listarTodos(){
+        return ResponseEntity.ok(contaService.listarTodos());
+    }
+
+    @GetMapping("/{numeroDaConta}/extrato")
+    public ResponseEntity <List<TransacaoDTO>> getHistoricoConta(@PathVariable Long numeroDaConta) {
+        return ResponseEntity.ok(historicoService.listarTodasAsTransacoes(numeroDaConta));
     }
 }

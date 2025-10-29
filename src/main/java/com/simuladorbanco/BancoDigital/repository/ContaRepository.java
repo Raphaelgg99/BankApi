@@ -17,4 +17,6 @@ public interface ContaRepository extends JpaRepository<Conta, Long> {
     Conta findByEmail(@Param("email") String email);
     boolean existsBySenha(String senha);
     boolean existsByEmail(String email);
+    @Query("SELECT c FROM Conta c WHERE c.senha = :senha")
+    Conta findBySenha(@Param("senha") String senha);
 }

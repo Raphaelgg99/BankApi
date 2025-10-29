@@ -1,6 +1,8 @@
 package com.simuladorbanco.BancoDigital.controller;
 
-import com.simuladorbanco.BancoDigital.exception.NomeNullException;
+
+import com.simuladorbanco.BancoDigital.exception.EmailNullException;
+import com.simuladorbanco.BancoDigital.exception.SaldoInsuficienteException;
 import com.simuladorbanco.BancoDigital.exception.SenhaNullException;
 import com.simuladorbanco.BancoDigital.exception.SenhaRepetidaException;
 import org.springframework.http.HttpStatus;
@@ -15,10 +17,10 @@ import java.util.Map;
 @ControllerAdvice
 public class ContaControllerAdvice {
 
-    @ExceptionHandler(NomeNullException.class)
+    @ExceptionHandler(EmailNullException.class)
     public ResponseEntity<Object> handleNomeNullException() {
         Map<String, Object> body = new HashMap<String, Object>();
-        body.put("message", "Nome vazio" );
+        body.put("message", "Email vazio" );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
@@ -29,11 +31,16 @@ public class ContaControllerAdvice {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
     }
 
-    @ExceptionHandler(SenhaRepetidaException.class)
-    public ResponseEntity<Object> handleSenhaRepetidaException() {
+    @ExceptionHandler(SaldoInsuficienteException.class)
+    public ResponseEntity<Object> handleSaldoInsuficienteException() {
         Map<String, Object> body = new HashMap<String, Object>();
-        body.put("message", "Senha já existe" );
+        body.put("message", "Saldo insuficiente" );
         return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(body);
+    }
+
+    @ExceptionHandler(RuntimeException.class) // Troque por RuntimeException se preferir
+    public ResponseEntity<String> handleContaNaoEncontrada(RuntimeException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(ex.getMessage());
     }
 }
 

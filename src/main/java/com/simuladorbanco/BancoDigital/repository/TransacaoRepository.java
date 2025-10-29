@@ -10,8 +10,7 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 
 @Repository
-
 public interface TransacaoRepository extends JpaRepository<Transacao, Long> {
-    @Query("SELECT t FROM Transacao t WHERE t.contaRementente = :conta OR t.contaDestinario = :conta")
-    List<Transacao> findByConta(@Param("conta") Conta conta);
+    List<Transacao> findByContaRemetente(Conta contaRemetente);
+    List<Transacao> findByContaDestinatario(Conta contaDestinatario);
 }

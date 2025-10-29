@@ -1,6 +1,7 @@
 package com.simuladorbanco.BancoDigital.model;
 
 import jakarta.persistence.*;
+import jakarta.validation.constraints.NotBlank;
 import lombok.Data;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -22,8 +23,10 @@ public class Conta {
     @Column(nullable = false)
     private String nome;
 
+
     @Column(nullable = false)
     private String email;
+
 
     @Column(nullable = false)
     private String senha;
@@ -36,8 +39,4 @@ public class Conta {
     @Column(name = "role_id")
     private List<String> roles = new ArrayList<>();
 }
-/*@ElementCollection(fetch = FetchType.EAGER)
-@CollectionTable(name = "tab_conta_roles", joinColumns = @JoinColumn(name = "conta_id"))
-@Column(name = "role_id")
-private List<String> roles = new ArrayList<>(); */
 

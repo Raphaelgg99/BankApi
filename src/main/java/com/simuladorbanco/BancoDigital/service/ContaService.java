@@ -1,54 +1,136 @@
 package com.simuladorbanco.BancoDigital.service;
 
-import com.simuladorbanco.BancoDigital.exception.EmailRepetidoException;
-import com.simuladorbanco.BancoDigital.exception.NomeNullException;
-import com.simuladorbanco.BancoDigital.exception.SenhaNullException;
-import com.simuladorbanco.BancoDigital.exception.SenhaRepetidaException;
+import com.simuladorbanco.BancoDigital.dtos.TransacaoDTO;
+import com.simuladorbanco.BancoDigital.dtos.TransferenciaRequest;
+import com.simuladorbanco.BancoDigital.exception.*;
 import com.simuladorbanco.BancoDigital.model.Conta;
+import com.simuladorbanco.BancoDigital.model.Transacao;
 import com.simuladorbanco.BancoDigital.repository.ContaRepository;
+import com.simuladorbanco.BancoDigital.repository.TransacaoRepository;
 import jakarta.transaction.Transactional;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.PathVariable;
+
+import java.time.LocalDateTime;
+import java.util.List;
 
 @Service
 @Transactional
 public class ContaService {
+
     @Autowired
     private ContaRepository contaRepository;
 
     @Autowired
     private PasswordEncoder encoder;
 
+    @Autowired
+    private TransacaoRepository transacaoRepository;
 
-    public void criarConta(Conta conta){
-        if(conta.getNome() == null ){
-            throw new NomeNullException();
+    @Autowired
+    private TransacaoService transacaoService;
+
+
+    public Conta criarConta(Conta conta){
+        if (conta.getEmail() == null) {
+            throw new EmailNullException();
         }
-        if (conta.getSenha() == null){
+        if (conta.getSenha() == null) {
             throw new SenhaNullException();
         }
-        if(contaRepository.existsByEmail(conta.getEmail())){
+        Conta contaExistente = contaRepository.findByEmail(conta.getEmail());
+        if (contaExistente!=null) {
             throw new EmailRepetidoException();
         }
-        if(contaRepository.existsBySenha(conta.getSenha())){
-            throw new SenhaRepetidaException();
-        }
-        String pass = conta.getSenha();
-        conta.setSenha(encoder.encode(pass));
-        contaRepository.save(conta);
-        contaRepository.flush();
+        String senhaCriptografada = encoder.encode(conta.getSenha());
+        conta.setSenha(senhaCriptografada);
+        return contaRepository.save(conta);
     }
 
-    public void atualizarConta(Long numeroDaConta, Conta contaAtualizada){
+    public Conta atualizarConta(Long numeroDaConta, Conta contaAtualizada){
         Conta conta = contaRepository.findById(numeroDaConta).
                 orElseThrow(() -> new RuntimeException("Conta não encontrado"));
         conta.setNome(contaAtualizada.getNome());
-        conta.setEmail(contaAtualizada.getEmail());
         String senhaCriptografada = encoder.encode(contaAtualizada.getSenha());
+        if(contaRepository.existsByEmail(contaAtualizada.getEmail()) &&
+                !conta.getEmail().equals(contaAtualizada.getEmail())){
+            throw new EmailRepetidoException();}
+        conta.setEmail(contaAtualizada.getEmail());
         conta.setSenha(senhaCriptografada);
         conta.setSaldo(contaAtualizada.getSaldo());
+        return contaRepository.save(conta);
+    }
+
+    public TransacaoDTO depositar(Double valor, Long numeroDaConta) {
+        Conta conta = contaRepository.findById(numeroDaConta)
+                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+        if (valor == null || valor <= 0) {
+            throw new IllegalArgumentException("O valor do depósito deve ser maior que zero.");
+        }
+        conta.setSaldo(conta.getSaldo() + valor);
+        System.out.println("Conta atualizada: " + conta);
         contaRepository.save(conta);
+        Transacao transacao = transacaoService.adicionarTransacaoDeposito(conta, valor);
+        TransacaoDTO transacaoDTO = transacaoService.adicionarTransacaoDTODeposito(conta, transacao);
+        return transacaoDTO;
+    }
+
+    public TransacaoDTO sacar(Double valor, Long numeroDaConta){
+        Conta conta = contaRepository.findById(numeroDaConta)
+                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+        if(conta.getSaldo()<valor){
+            throw new SaldoInsuficienteException();
+        }
+        if (valor <= 0) {
+            throw new IllegalArgumentException("O valor do saque deve ser maior que zero.");
+        }
+        conta.setSaldo(conta.getSaldo() - valor);
+        Transacao transacao = transacaoService.adicionarTransacaoSaque(conta,valor);
+        TransacaoDTO transacaoDTO = transacaoService.adicionarTransacaoDTOSaque(conta,transacao);
+        contaRepository.save(conta);
+        return transacaoDTO;
+    }
+
+    public TransacaoDTO transferencia(TransferenciaRequest transferencia, Long numeroContaRemetente
+    ){
+        Conta contaRemetente = contaRepository.findById(numeroContaRemetente)
+                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+        Conta contaDestinario = contaRepository.findById(transferencia.getNumeroContaDestinatario())
+                .orElseThrow(() -> new RuntimeException("Conta não encontrada"));
+        if(contaRemetente.getSaldo()<transferencia.getValor()){
+            throw new SaldoInsuficienteException();
+        }
+        contaRemetente.setSaldo(contaRemetente.getSaldo() - transferencia.getValor());
+        contaDestinario.setSaldo(contaDestinario.getSaldo() + transferencia.getValor());
+        contaRepository.save(contaRemetente);
+        contaRepository.save(contaDestinario);
+        Transacao transacao = transacaoService.adicionarTransacaoTransferencia(contaRemetente, contaDestinario
+                , transferencia.getValor());
+        TransacaoDTO transacaoDTO = transacaoService.adicionarTransacaoDTOTransferencia(contaRemetente,
+                contaDestinario,
+                transacao);
+        return transacaoDTO;
+    }
+
+    public void removerConta(@PathVariable Long numeroDaConta){
+        Conta conta = contaRepository.findById(numeroDaConta).
+                orElseThrow(() -> new RuntimeException("Conta não encontrado"));
+        List<Transacao> transacoesRemetente = transacaoRepository.findByContaRemetente(conta);
+        Conta contaDefault = contaRepository.findById(99L).
+                orElseThrow(() -> new RuntimeException("Conta não encontrado"));;
+        for(Transacao transacao : transacoesRemetente){
+            transacao.setContaRemetente(contaDefault);
+        }
+        List<Transacao> transacoesDestinatario = transacaoRepository.findByContaDestinatario(conta);
+        for(Transacao transacao : transacoesDestinatario){
+            transacao.setContaDestinatario(contaDefault);
+        }
+        contaRepository.delete(conta);
+    }
+    public List<Conta> listarTodos(){
+        return contaRepository.findAll();
     }
 }
 

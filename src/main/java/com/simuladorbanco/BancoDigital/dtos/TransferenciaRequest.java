@@ -7,10 +7,10 @@ public class TransferenciaRequest {
     // Construtores
     public TransferenciaRequest() {}
 
-    public TransferenciaRequest(double valor, Long numeroContaDestinatario) {
+    /*public TransferenciaRequest(double valor, Long numeroContaDestinatario) {
         this.valor = valor;
         this.numeroContaDestinatario = numeroContaDestinatario;
-    }
+    }*/
 
     // Getters e setters
     public double getValor() {

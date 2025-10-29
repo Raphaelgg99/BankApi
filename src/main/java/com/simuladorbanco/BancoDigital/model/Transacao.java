@@ -1,8 +1,10 @@
 package com.simuladorbanco.BancoDigital.model;
 
+import com.simuladorbanco.BancoDigital.dtos.ContaDTO;
 import jakarta.persistence.*;
 import lombok.Data;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Entity
@@ -14,21 +16,20 @@ public class Transacao {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Enumerated(EnumType.STRING)
-    private Tipo tipo;
+    @Column(nullable = false)
+    private String tipo;
 
     @ManyToOne
-    @JoinColumn(name = "remetente_id")
-    private Conta contaRementente;
+    @JoinColumn(name = "conta_remetente_id")  // Relacionamento com a Conta, não DTO
+    private Conta contaRemetente;
 
     @ManyToOne
-    @JoinColumn(name = "destinatario_id")
-    private Conta contaDestinario;
+    @JoinColumn(name = "conta_destinatario_id")
+    private Conta contaDestinatario;
 
     @Column(nullable = false)
-    private double valor;  // Valor da transação
+    private double valor;
 
     @Column(nullable = false)
-    private LocalDateTime dataHora;
-
+    private LocalDateTime data;
 }
